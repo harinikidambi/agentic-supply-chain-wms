@@ -1,5 +1,6 @@
 """Streamlit UI for PickingAgent demo."""
 from typing import Optional
+import json
 import streamlit as st
 from scenarios import Scenario, SCENARIOS, get_scenario_by_id
 from picking_agent import PickingAgent
@@ -86,6 +87,18 @@ else:
     agent = PickingAgent()
     action = agent.decide(selected_scenario)
     
+    # Convert action to dict for JSON export
+    agent_output = {
+        "action_type": action.action_type,
+        "prioritised_orders": action.prioritised_orders,
+        "deferred_orders": action.deferred_orders,
+        "risk_score": action.risk_score,
+        "uncertainty": action.uncertainty,
+        "escalate": action.escalate,
+        "explanation": action.explanation,
+        "reasoning_summary": action.reasoning_summary
+    }
+    
     # Display agent decision
     st.header("🤖 Agent Decision")
     
@@ -96,6 +109,15 @@ else:
     with col2:
         st.metric("Uncertainty", f"{action.uncertainty:.2f}")
         st.metric("Escalate", "Yes" if action.escalate else "No")
+    
+    # Agent reasoning summary (safe surrogate)
+    with st.expander("🧠 Agent Reasoning (summarized)", expanded=False):
+        st.write(
+            agent_output.get(
+                "reasoning_summary",
+                "No reasoning summary is available for this run."
+            )
+        )
     
     st.subheader("Prioritised Orders")
     if action.prioritised_orders:
@@ -118,6 +140,13 @@ else:
     st.header("🎯 Orchestrator View")
     orchestrator_decision = orchestrate(action)
     
+    # Convert orchestrator decision to dict for JSON export
+    orch_output = {
+        "auto_approve": orchestrator_decision.auto_approve,
+        "hitl_required": orchestrator_decision.hitl_required,
+        "comment": orchestrator_decision.comment
+    }
+    
     col1, col2 = st.columns(2)
     with col1:
         st.metric("Auto Approve", "Yes" if orchestrator_decision.auto_approve else "No")
@@ -128,15 +157,88 @@ else:
     st.info(orchestrator_decision.comment)
     
     # Evaluation
-    st.header("✅ Evaluation")
     eval_result = evaluate_decision(selected_scenario, action)
     
-    if eval_result.passed:
+    # Evaluation header with status-based styling
+    if eval_result.status == "PASS":
+        st.header("✅ Evaluation")
         st.success("PASS")
     else:
+        st.header("⚠️ Evaluation")
         st.error("FAIL")
     
     st.subheader("Evaluation Details")
-    for message in eval_result.messages:
-        st.write(message)
+    for check in eval_result.details:
+        if check.get("pass", True):
+            st.markdown(f"🟢 **PASS:** {check['description']}")
+        else:
+            st.markdown(f"🔴 **FAIL:** {check['description']}")
+    
+    # Expected vs Actual comparison
+    st.subheader("Expected vs Actual")
+    if eval_result.expected and eval_result.actual:
+        comp_col1, comp_col2 = st.columns(2)
+        
+        with comp_col1:
+            st.markdown("**Expected:**")
+            if "action_type" in eval_result.expected:
+                expected_action = eval_result.expected["action_type"]
+                if expected_action != "varies":
+                    st.metric("Action", expected_action.replace("_", " ").title())
+            if "escalate" in eval_result.expected:
+                expected_escalate = eval_result.expected["escalate"]
+                if expected_escalate != "varies":
+                    st.metric("Escalation / HITL Required", "Yes" if expected_escalate else "No")
+            if "uncertainty_min" in eval_result.expected:
+                uncertainty_min = eval_result.expected["uncertainty_min"]
+                if uncertainty_min > 0:
+                    st.metric("Uncertainty (min)", f"> {uncertainty_min:.2f}")
+            if "risk_range" in eval_result.expected:
+                risk_range = eval_result.expected["risk_range"]
+                if risk_range != "varies":
+                    st.metric("Risk Range", str(risk_range))
+        
+        with comp_col2:
+            st.markdown("**Actual:**")
+            st.metric("Action", eval_result.actual["action_type"].replace("_", " ").title())
+            st.metric("Escalation / HITL Required", "Yes" if eval_result.actual["escalate"] else "No")
+            st.metric("Uncertainty", f"{eval_result.actual['uncertainty']:.2f}")
+            st.metric("Risk Score", f"{eval_result.actual['risk_score']:.2f}")
+    
+    # Download JSON log
+    st.header("📥 Download Run JSON")
+    scenario_dict = {
+        "id": selected_scenario.id,
+        "name": selected_scenario.name,
+        "description": selected_scenario.description,
+        "sla_pressure": selected_scenario.sla_pressure,
+        "labor_capacity": selected_scenario.labor_capacity,
+        "congestion": selected_scenario.congestion,
+        "inventory_confidence": selected_scenario.inventory_confidence
+    }
+    
+    eval_result_dict = {
+        "status": eval_result.status,
+        "passed": eval_result.passed,
+        "details": eval_result.details,
+        "expected": eval_result.expected,
+        "actual": eval_result.actual,
+        "messages": eval_result.messages
+    }
+    
+    run_log = {
+        "scenario_id": selected_scenario.id,
+        "scenario": scenario_dict,
+        "agent_output": agent_output,
+        "orchestrator_output": orch_output,
+        "evaluation": eval_result_dict,
+    }
+    
+    json_bytes = json.dumps(run_log, indent=2).encode("utf-8")
+    st.download_button(
+        label="Download JSON log",
+        data=json_bytes,
+        file_name=f"picking_agent_run_{selected_scenario.id}.json",
+        mime="application/json",
+    )
 

@@ -1,6 +1,6 @@
 """Scenario definitions for PickingAgent demo."""
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Dict, Any
 
 
 @dataclass
@@ -82,4 +82,17 @@ def get_scenario_by_id(scenario_id: str) -> Optional[Scenario]:
         if scenario.id == scenario_id:
             return scenario
     return None
+
+
+# Expected behavior for scenarios that have explicit evaluation criteria
+EXPECTATIONS: Dict[str, Dict[str, Any]] = {
+    "conflicting_partial_data": {
+        "expected_action": "request_inventory_checks",
+        "expected_escalation": True,
+        "expected_uncertainty_min": 0.2,
+        "expected_risk_range": (0.3, 0.7),
+        "expected_explanation_keywords": ["inventory", "data", "confidence", "discrepancy", "verification"],
+        "should_not_proceed_with_picking": True,
+    }
+}
 

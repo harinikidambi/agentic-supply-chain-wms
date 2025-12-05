@@ -20,6 +20,7 @@ class ProposedAction:
     uncertainty: float
     escalate: bool
     explanation: str
+    reasoning_summary: str  # Human-readable summary of agent's reasoning
 
 
 class PickingAgent:
@@ -82,6 +83,38 @@ class PickingAgent:
         if inventory_confidence_risk > 0.4:
             escalate = True
         
+        # INTENTIONAL FAILURE: For conflicting_partial_data scenario, make a bad decision
+        # This demonstrates evaluation catching unsafe behavior
+        if scenario.id == "conflicting_partial_data":
+            # Wrong decision: proceed with picking despite low confidence
+            action_type = "proceed_with_picking"
+            prioritised_orders = ["all_orders"]
+            deferred_orders = []
+            escalate = False  # Should escalate but doesn't
+            # Create a plausible but wrong reasoning
+            reasoning_summary = (
+                "Agent assumes discrepancies are minor and proceeds without verification. "
+                "Inventory confidence is mixed but within acceptable range for standard operations. "
+                "Proceeding with picking to meet SLA targets."
+            )
+        else:
+            # Normal reasoning summary for other scenarios
+            reasoning_parts = []
+            if scenario.sla_pressure == "high":
+                reasoning_parts.append(f"High SLA pressure ({sla_risk:.2f} risk) requires prioritization.")
+            if labor_feasibility < 0.7:
+                reasoning_parts.append(f"Labor capacity concerns ({labor_feasibility:.2f} feasibility) may require escalation.")
+            if inventory_confidence_risk > 0.3:
+                reasoning_parts.append(f"Inventory confidence issues ({inventory_confidence_risk:.2f} risk) need verification.")
+            if congestion_risk > 0.4:
+                reasoning_parts.append(f"Congestion risk ({congestion_risk:.2f}) affects routing decisions.")
+            if escalate:
+                reasoning_parts.append("Escalation required due to high risk or uncertainty.")
+            else:
+                reasoning_parts.append("All constraints within acceptable thresholds for autonomous operation.")
+            
+            reasoning_summary = " ".join(reasoning_parts) if reasoning_parts else "Standard operation proceeding normally."
+        
         # Build explanation
         explanation_parts = []
         explanation_parts.append(f"SLA Pressure: {scenario.sla_pressure.upper()} (risk score: {sla_risk:.2f})")
@@ -110,6 +143,7 @@ class PickingAgent:
             risk_score=round(risk_score, 2),
             uncertainty=round(uncertainty, 2),
             escalate=escalate,
-            explanation=explanation
+            explanation=explanation,
+            reasoning_summary=reasoning_summary
         )
 
