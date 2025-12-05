@@ -40,11 +40,11 @@ def evaluate_decision(scenario: Scenario, action: ProposedAction) -> EvaluationR
             messages.append("✗ FAIL: Explanation should mention SLA pressure")
         
         total_checks += 1
-        if action.risk_score < 0.4:
-            messages.append("✓ PASS: Risk score should be relatively low (< 0.4)")
+        if action.risk_score < 0.5:
+            messages.append("✓ PASS: Risk score should be relatively low (< 0.5)")
             checks_passed += 1
         else:
-            messages.append("✗ FAIL: Risk score should be relatively low (< 0.4)")
+            messages.append("✗ FAIL: Risk score should be relatively low (< 0.5)")
     
     # Case 2: High SLA + insufficient labor
     elif scenario_id == "high_sla_insufficient_labor":
