@@ -72,7 +72,7 @@ OR
 
 ## Using in an Interview
 
-This demo can be used to demonstrate agent behavior in interviews:
+This demo can be used to demonstrate agent behavior :
 
 1. **Select a scenario** - Choose one of the four predefined scenarios
 2. **Run the agent** - Click "Run Agent" to see the decision
@@ -88,12 +88,5 @@ This demo can be used to demonstrate agent behavior in interviews:
    - For the `conflicting_partial_data` scenario, demonstrate how evaluation catches unsafe behavior
 7. **Export run log** - Download the JSON log to show complete traceability
 
-The demo provides a concrete, interactive way to discuss:
-- Agent decision-making logic and reasoning transparency
-- Risk assessment and uncertainty handling
-- Escalation criteria and safety guardrails
-- Evaluation frameworks and structured testing
-- Multi-agent coordination (orchestrator interaction)
-- Failure detection and safety mechanisms
-- Logging and traceability for production systems
+
 
